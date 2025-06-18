@@ -1,10 +1,15 @@
 package pcd.ass01
-import scala.annotation.tailrec
+import akka.actor.typed.ActorSystem
+import akka.actor.typed.Behavior
+import akka.actor.typed.scaladsl.Behaviors
 
 object BoidsSimulator :
   val FRAMERATE = 50
+  private enum Loop:
+    case Continue
 
 class BoidsSimulator(protected val model: BoidsModel) {
+  import BoidsSimulator.*
   protected var view: Option[BoidsView] = None
 
   @volatile
@@ -66,26 +71,25 @@ class BoidsSimulator(protected val model: BoidsModel) {
       v.updateFrameRate(0)
       v.enableStartStopButton()
 
-  @tailrec
-  private def loop(): Unit =
-    if model.isRunning then
-      if toStart then start()
-      if model.isSuspended then
-        if !toResume then suspend()
-      else
-        if toResume then resume()
-        updateBoids()
-      updateView()
-      loop()
-    else if !toStart then
-      stop()
-      loop()
-    else if view.isDefined then loop()
+  private val loop: Behavior[Loop] = Behaviors.receive : (ctx, cmd) =>
+    cmd match
+      case Loop.Continue =>
+        if model.isRunning then
+          if toStart then start()
+          if model.isSuspended then
+            if !toResume then suspend()
+          else
+            if toResume then resume()
+            updateBoids()
+          updateView()
+        else if !toStart then stop()
+        ctx.self ! Loop.Continue
+        Behaviors.same
 
   def runSimulation(): Unit =
     toStart = true
     toResume = false
-    loop()
+    ActorSystem(loop, "MainLoop") ! Loop.Continue
 
   private def updateBoids(): Unit =
     val boids = model.boids
