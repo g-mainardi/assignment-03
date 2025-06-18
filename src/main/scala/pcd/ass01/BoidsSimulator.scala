@@ -1,11 +1,10 @@
 package pcd.ass01
 import scala.annotation.tailrec
 
-object BoidsSimulator {
+object BoidsSimulator :
   val FRAMERATE = 50
-}
 
-class BoidsSimulatorSequential(protected val model: BoidsModel) {
+class BoidsSimulator(protected val model: BoidsModel) {
   protected var view: Option[BoidsView] = None
 
   @volatile

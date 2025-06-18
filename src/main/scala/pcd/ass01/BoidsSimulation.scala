@@ -19,6 +19,6 @@ object BoidsSimulation extends App:
                           COHESION_WEIGHT, ENVIRONMENT_WIDTH, ENVIRONMENT_HEIGHT,
                           MAX_SPEED, PERCEPTION_RADIUS, AVOID_RADIUS)
 
-  private val sim = BoidsSimulatorSequential(model)
+  private val sim = BoidsSimulator(model)
   sim attachView BoidsView(model, SCREEN_WIDTH, SCREEN_HEIGHT)
   sim.runSimulation()
