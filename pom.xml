@@ -15,12 +15,28 @@
     <maven.compiler.release>21</maven.compiler.release>
   </properties>
 
+  <repositories>
+    <repository>
+      <id>akka-repo</id>
+      <name>Akka Repository</name>
+      <url>https://repo.akka.io/maven/</url>
+    </repository>
+  </repositories>
+
   <dependencies>
-      <dependency>
-          <groupId>org.scala-lang</groupId>
-          <artifactId>scala3-library_3</artifactId>
-          <version>3.3.3</version>
-      </dependency>
+    <!-- Scala 3 library -->
+    <dependency>
+      <groupId>org.scala-lang</groupId>
+      <artifactId>scala3-library_3</artifactId>
+      <version>3.3.3</version>
+    </dependency>
+
+    <!-- Akka Actor -->
+    <dependency>
+      <groupId>com.typesafe.akka</groupId>
+      <artifactId>akka-actor-typed_3</artifactId>
+      <version>2.10.5</version>
+    </dependency>
   </dependencies>
 
   <build>
@@ -47,26 +63,27 @@
           <artifactId>maven-jar-plugin</artifactId>
           <version>3.4.2</version>
         </plugin>
-     	<plugin>
-        	<groupId>org.apache.maven.plugins</groupId>
-        	<artifactId>maven-shade-plugin</artifactId>
-        	<version>3.6.0</version>
-        	<executions>
-          		<execution>
-            		<phase>package</phase>
- 	 		        <goals>
-              			<goal>shade</goal>
-            		</goals>
-            		<configuration>
-              			<transformers>
-                			<transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                  				<mainClass>pcd.lab01.hello.Main</mainClass>
-                			</transformer>
-              			</transformers>
-            		</configuration>
-          		</execution>
-        	</executions>
-      	</plugin>
+        <!-- Maven Shade Plugin -->
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-shade-plugin</artifactId>
+          <version>3.6.0</version>
+          <executions>
+            <execution>
+              <phase>package</phase>
+              <goals>
+                <goal>shade</goal>
+              </goals>
+              <configuration>
+                <transformers>
+                  <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                    <mainClass>pcd.lab01.hello.Main</mainClass>
+                  </transformer>
+                </transformers>
+              </configuration>
+            </execution>
+          </executions>
+        </plugin>
 <!--
         <plugin>
           <artifactId>maven-install-plugin</artifactId>
