@@ -1,16 +1,18 @@
 package pcd.ass01
-import akka.actor.typed.ActorSystem
-import akka.actor.typed.Behavior
+import akka.actor.typed.{ActorSystem, Behavior}
 import akka.actor.typed.scaladsl.Behaviors
 
 object BoidsSimulator :
   val FRAMERATE = 50
+  private enum Command:
+    case UpdateBoidsPos
+    case UpdateBoidsVel
   private enum Loop:
     case Continue
     case Update
 
 class BoidsSimulator(protected val model: BoidsModel) {
-  import BoidsSimulator.*
+  import BoidsSimulator.{Command, Loop}
 
   private var mainLoop: Option[ActorSystem[Loop]] = None
 
@@ -92,8 +94,7 @@ class BoidsSimulator(protected val model: BoidsModel) {
             Behaviors.same
           else
             if toResume then resume()
-            updateBoids()
-            ctx.self ! Update
+            (ctx spawnAnonymous updateBoids) ! Command.UpdateBoidsVel
             Behaviors.same
         else
           if !toStart then stop()
@@ -106,8 +107,15 @@ class BoidsSimulator(protected val model: BoidsModel) {
     mainLoop = Some(ActorSystem(loop, "MainLoop"))
     mainLoop foreach{_ ! Loop.Continue}
 
-  private def updateBoids(): Unit =
-    val boids = model.boids
-    boids foreach(_.updateVelocity(model))
-    boids foreach(_.updatePos(model))
+  import Command.*
+  private val updateBoids: Behavior[BoidsSimulator.Command] = Behaviors.receive: (ctx, cmd) =>
+    cmd match
+    case UpdateBoidsVel =>
+      model.boids foreach {_.updateVelocity(model)}
+      ctx.self ! UpdateBoidsPos
+      Behaviors.same
+    case UpdateBoidsPos =>
+      model.boids foreach {_.updatePos(model)}
+      mainLoop foreach{_ ! Loop.Update}
+      Behaviors.stopped
 }
