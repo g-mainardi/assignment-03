@@ -3,7 +3,7 @@ import akka.actor.typed.{ActorSystem, Behavior}
 import akka.actor.typed.scaladsl.Behaviors
 
 object BoidsSimulator :
-  val FRAMERATE = 50
+  private val FRAMERATE = 50
   private enum Command:
     case UpdateBoidsPos
     case UpdateBoidsVel
@@ -11,20 +11,18 @@ object BoidsSimulator :
     case Continue
     case Update
 
-class BoidsSimulator(protected val model: BoidsModel) {
+class BoidsSimulator(private val model: BoidsModel) {
   import BoidsSimulator.{Command, Loop}
 
   private var mainLoop: Option[ActorSystem[Loop]] = None
 
-  protected var view: Option[BoidsView] = None
+  private var view: Option[BoidsView] = None
 
-  @volatile
-  protected var toStart = false
-  @volatile
-  protected var toResume = false
+  private var toStart = false
+  private var toResume = false
 
   private var startingTime = 0L
-  protected var framerate = 0
+  private var framerate = 0
   private var t0 = 0L
 
   def attachView(view: BoidsView): Unit = this.view = Some(view)
@@ -32,7 +30,7 @@ class BoidsSimulator(protected val model: BoidsModel) {
 //  def clear(): Unit = ()
 //  def init(): Unit = ()
 
-  protected def updateView(): Unit =
+  private def updateView(): Unit =
     view foreach : v =>
       v.update()
       v updateFrameRate framerate
@@ -47,15 +45,15 @@ class BoidsSimulator(protected val model: BoidsModel) {
         framerate = BoidsSimulator.FRAMERATE
       else framerate = (1000 / dtElapsed).toInt
 
-  protected def suspend(): Unit =
+  private def suspend(): Unit =
     toResume = true
     view foreach(_.enableSuspendResumeButton())
 
-  protected def resume(): Unit =
+  private def resume(): Unit =
     toResume = false
     view foreach(_.enableSuspendResumeButton())
 
-  protected def start(): Unit =
+  private def start(): Unit =
     model.generateBoids()
 //    init()
     startingTime = System.currentTimeMillis
@@ -63,7 +61,7 @@ class BoidsSimulator(protected val model: BoidsModel) {
     toStart = false
     view foreach (_.enableStartStopButton())
 
-  protected def stop(): Unit =
+  private def stop(): Unit =
 //    clear()
     model.clearBoids()
     toStart = true
