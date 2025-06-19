@@ -75,9 +75,10 @@ class BoidsSimulator(protected val model: BoidsModel) {
       v.updateFrameRate(0)
       v.enableStartStopButton()
 
-  private val loop: Behavior[Loop] = Behaviors.receive : (ctx, cmd) =>
+  private val loop: Behavior[Loop] =
     import Loop.*
-    cmd match
+    Behaviors.receive : (ctx, cmd) =>
+      cmd match
       case Update =>
         updateView()
         ctx.self ! Continue
@@ -87,7 +88,7 @@ class BoidsSimulator(protected val model: BoidsModel) {
           if toStart then start()
           if model.isSuspended then
             if !toResume then suspend()
-            ctx.self ! Update
+            ctx.self ! Continue
             Behaviors.same
           else
             if toResume then resume()
