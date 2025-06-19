@@ -7,9 +7,13 @@ object BoidsSimulator :
   val FRAMERATE = 50
   private enum Loop:
     case Continue
+    case Update
 
 class BoidsSimulator(protected val model: BoidsModel) {
   import BoidsSimulator.*
+
+  private var mainLoop: Option[ActorSystem[Loop]] = None
+
   protected var view: Option[BoidsView] = None
 
   @volatile
@@ -72,24 +76,34 @@ class BoidsSimulator(protected val model: BoidsModel) {
       v.enableStartStopButton()
 
   private val loop: Behavior[Loop] = Behaviors.receive : (ctx, cmd) =>
+    import Loop.*
     cmd match
-      case Loop.Continue =>
+      case Update =>
+        updateView()
+        ctx.self ! Continue
+        Behaviors.same
+      case Continue =>
         if model.isRunning then
           if toStart then start()
           if model.isSuspended then
             if !toResume then suspend()
+            ctx.self ! Update
+            Behaviors.same
           else
             if toResume then resume()
             updateBoids()
-          updateView()
-        else if !toStart then stop()
-        ctx.self ! Loop.Continue
-        Behaviors.same
+            ctx.self ! Update
+            Behaviors.same
+        else
+          if !toStart then stop()
+          ctx.self ! Continue
+          Behaviors.same
 
   def runSimulation(): Unit =
     toStart = true
     toResume = false
-    ActorSystem(loop, "MainLoop") ! Loop.Continue
+    mainLoop = Some(ActorSystem(loop, "MainLoop"))
+    mainLoop foreach{_ ! Loop.Continue}
 
   private def updateBoids(): Unit =
     val boids = model.boids
