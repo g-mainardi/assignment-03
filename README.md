@@ -19,6 +19,8 @@ For every aspect not specified, students are free to choose the best approach fo
 Develop a distributed implementation of Agar.io game, starting from a not distributed version (by G. Aguzzi)
 - [Full description](https://github.com/cric96/pcd-assignment-2025/tree/main), based on Akka Distributed Actors
 - Alternatively, the distributed implemementation can be based on a MOM (e.g. RabbitMQ), as presented in [Lab Activity 20250606](https://github.com/pcd-2024-2025/lab-10)
+  - in this case, [here](https://github.com/cric96/pcd-assignment-2025-advanced) you can find a Java-based centralised sequential version that can be useful as a starting point.
+
 
 
 **3) Facultative points - mandatory only for getting max grade (30 or 30L)** 
@@ -29,6 +31,7 @@ Develop a distributed implementation of Agar.io game, starting from a not distri
 
 
 - *About Java RMI* -- Develop a distributed implementation of the game presented in point (2) using also Java RMI, as presented in [Lab Activity 20250606](https://github.com/pcd-2024-2025/lab-10)
+  - in this case too, [here](https://github.com/cric96/pcd-assignment-2025-advanced) you can find a Java-based centralised sequential version that can be useful as a starting point.
 
 
 ### The deliverable
