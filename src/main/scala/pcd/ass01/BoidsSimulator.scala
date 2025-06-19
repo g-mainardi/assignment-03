@@ -103,6 +103,8 @@ class BoidsSimulator(private val model: BoidsModel) {
     toStart = true
     toResume = false
     mainLoop = Some(ActorSystem(loop, "MainLoop"))
+    import SimulationParameter.*
+    view = Some(BoidsView(model, SCREEN_WIDTH, SCREEN_HEIGHT))
     mainLoop foreach{_ ! Loop.Continue}
 
   import Command.*
