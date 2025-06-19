@@ -1,5 +1,5 @@
 package pcd.ass01
-import akka.actor.typed.{ActorSystem, Behavior}
+import akka.actor.typed.{ActorSystem, Behavior, Terminated}
 import akka.actor.typed.scaladsl.Behaviors
 
 object BoidsSimulator :
@@ -7,9 +7,13 @@ object BoidsSimulator :
   private enum Command:
     case UpdateBoidsPos
     case UpdateBoidsVel
-  private enum Loop:
-    case Continue
-    case Update
+  enum Loop:
+    case Start(nBoids: String)
+    case Stop
+    case Suspend
+    case Resume
+    case UpdateBoids
+    case UpdateView
 
 class BoidsSimulator(private val model: BoidsModel) {
   import BoidsSimulator.{Command, Loop}
@@ -18,14 +22,9 @@ class BoidsSimulator(private val model: BoidsModel) {
 
   private var view: Option[BoidsView] = None
 
-  private var toStart = false
-  private var toResume = false
-
   private var startingTime = 0L
   private var framerate = 0
   private var t0 = 0L
-
-  def attachView(view: BoidsView): Unit = this.view = Some(view)
 
 //  def clear(): Unit = ()
 //  def init(): Unit = ()
@@ -46,76 +45,83 @@ class BoidsSimulator(private val model: BoidsModel) {
       else framerate = (1000 / dtElapsed).toInt
 
   private def suspend(): Unit =
-    toResume = true
+    view foreach(_.suspendAction())
     view foreach(_.enableSuspendResumeButton())
 
   private def resume(): Unit =
-    toResume = false
+    view foreach(_.resumeAction())
     view foreach(_.enableSuspendResumeButton())
 
   private def start(): Unit =
+    view foreach {_.startAction()}
     model.generateBoids()
 //    init()
     startingTime = System.currentTimeMillis
     t0 = System.currentTimeMillis
-    toStart = false
     view foreach (_.enableStartStopButton())
 
-  private def stop(): Unit =
-//    clear()
-    model.clearBoids()
-    toStart = true
+  private val validateNBoids: Int => Unit =
+    case n if n > 0  => model setBoidsNumber n
+    case _ => throw new IllegalArgumentException
 
-    if model.isSuspended then
-      toResume = false
+  import Loop.*
+  private val notRunning: Behavior[Loop] = Behaviors.receivePartial:
+    case (ctx, Start(nBoidsText)) =>
+      try
+        validateNBoids(nBoidsText.toInt)
+        start()
+        ctx.self ! UpdateView
+        running
+      catch
+        case _: NumberFormatException    => ctx.log info "Input format not allowed!";     Behaviors.same
+        case _: IllegalArgumentException => ctx.log info "Only positive numbers allowed!";Behaviors.same
+
+  private val running: Behavior[Loop] = Behaviors.receivePartial:
+    case (ctx, UpdateView) =>
+      updateView()
+      ctx.self ! UpdateBoids
+      Behaviors.same
+    case (ctx, UpdateBoids) =>
+      (ctx spawnAnonymous updateBoids) ! Command.UpdateBoidsVel
+      Behaviors.same
+    case (ctx, Stop) =>
+      stop()
+      notRunning
+    case (ctx, Suspend) =>
+      suspend()
+      suspended
+
+  private val suspended: Behavior[Loop] = Behaviors.receivePartial: 
+    case (ctx, Stop)   =>
       view foreach (_.resumeAction())
+      stop()
+      notRunning
+    case (ctx, Resume) =>
+      resume()
+      ctx.self ! UpdateView
+      running
 
+  private def stop(): Unit =
+    view foreach {_.stopAction()}
+    model.clearBoids()
     view foreach : (v: BoidsView) =>
       v.update()
       v.updateFrameRate(0)
       v.enableStartStopButton()
 
-  private val loop: Behavior[Loop] =
-    import Loop.*
-    Behaviors.receive : (ctx, cmd) =>
-      cmd match
-      case Update =>
-        updateView()
-        ctx.self ! Continue
-        Behaviors.same
-      case Continue =>
-        if model.isRunning then
-          if toStart then start()
-          if model.isSuspended then
-            if !toResume then suspend()
-            ctx.self ! Continue
-            Behaviors.same
-          else
-            if toResume then resume()
-            (ctx spawnAnonymous updateBoids) ! Command.UpdateBoidsVel
-            Behaviors.same
-        else
-          if !toStart then stop()
-          ctx.self ! Continue
-          Behaviors.same
-
   def runSimulation(): Unit =
-    toStart = true
-    toResume = false
-    mainLoop = Some(ActorSystem(loop, "MainLoop"))
+    mainLoop = Some(ActorSystem(notRunning, "MainLoop"))
     import SimulationParameter.*
-    view = Some(BoidsView(model, SCREEN_WIDTH, SCREEN_HEIGHT))
-    mainLoop foreach{_ ! Loop.Continue}
+    view = Some(BoidsView(model, SCREEN_WIDTH, SCREEN_HEIGHT, mainLoop.get))
 
-  import Command.*
-  private val updateBoids: Behavior[BoidsSimulator.Command] = Behaviors.receive: (ctx, cmd) =>
+  private val updateBoids: Behavior[Command] = Behaviors.receive: (ctx, cmd) =>
     cmd match
-    case UpdateBoidsVel =>
+    case Command.UpdateBoidsVel =>
       model.boids foreach {_.updateVelocity(model)}
-      ctx.self ! UpdateBoidsPos
+      ctx.self ! Command.UpdateBoidsPos
       Behaviors.same
-    case UpdateBoidsPos =>
+    case Command.UpdateBoidsPos =>
       model.boids foreach {_.updatePos(model)}
-      mainLoop foreach{_ ! Loop.Update}
+      mainLoop foreach{_ ! UpdateView}
       Behaviors.stopped
 }

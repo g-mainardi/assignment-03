@@ -14,13 +14,6 @@ class BoidsModel(var nBoids: Int,
                  val perceptionRadius: Double,
                  val avoidRadius: Double) :
   var boids: List[Boid] = List()
-  var isRunning   = false
-  var isSuspended = false
-
-  def turnOn(): Unit = isRunning = true
-  def turnOff(): Unit = isRunning = false
-  def suspend(): Unit = isSuspended = true
-  def resume(): Unit = isSuspended = false
 
   def generateBoids(): Unit =
     boids = (for

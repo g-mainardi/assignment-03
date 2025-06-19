@@ -1,5 +1,6 @@
 package pcd.ass01
 
+import akka.actor.typed.{ActorRef, ActorSystem}
 import pcd.ass01.Attribute.*
 
 import javax.swing.*
@@ -63,7 +64,8 @@ class BoidsPanel(val panelWidth: Int, val panelHeight: Int, private val model: B
     g drawString(s"Num. Boids: ${model.nBoids}", 10, 25)
     g drawString(s"Framerate: $framerate", 10, 40)
 
-class BoidsView(private val model: BoidsModel, val width: Int, val height: Int) extends ChangeListener {
+import BoidsSimulator.Loop
+class BoidsView(private val model: BoidsModel, val width: Int, val height: Int, private val mainLoop: ActorSystem[Loop]) extends ChangeListener {
   private val frame = new JFrame("Boids Simulation")
   frame.setSize(width, height)
   frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE)
@@ -91,8 +93,8 @@ class BoidsView(private val model: BoidsModel, val width: Int, val height: Int) 
 
   private object ControlPanel extends JPanel:
     SuspendResumeButton addActionListener { _ => SuspendResumeButton.getText match
-      case BoidsView.SUSPEND => suspendAction()
-      case BoidsView.RESUME => resumeAction()
+      case BoidsView.SUSPEND => mainLoop ! Loop.Suspend
+      case BoidsView.RESUME  => mainLoop ! Loop.Resume
       case _ => ()
     }
     this add new JLabel("Separation")
@@ -105,15 +107,8 @@ class BoidsView(private val model: BoidsModel, val width: Int, val height: Int) 
     this add BoidsNumberField
     this add StartAndStopButton
     StartAndStopButton addActionListener { _ => StartAndStopButton.getText match
-      case BoidsView.START =>
-        try
-          val newBoidsNumber = BoidsNumberField.getText.toInt
-          if newBoidsNumber <= 0 then throw new IllegalArgumentException
-          startAction(newBoidsNumber)
-        catch
-          case e: NumberFormatException => println("Input format not allowed!")
-          case e: IllegalArgumentException => println("Only positive numbers allowed!")
-      case BoidsView.STOP => stopAction()
+      case BoidsView.START => mainLoop ! Loop.Start(BoidsNumberField.getText)
+      case BoidsView.STOP  => mainLoop ! Loop.Stop
       case _ => ()
     }
     this add SuspendResumeButton
@@ -123,19 +118,16 @@ class BoidsView(private val model: BoidsModel, val width: Int, val height: Int) 
   private object StartAndStopButton extends SynchButton(BoidsView.START)
   private object SuspendResumeButton extends SynchButton(BoidsView.SUSPEND)
 
-  private def stopAction(): Unit =
+  def stopAction(): Unit =
     this.disableStartAndStopButton()
-    this.enableNumBoidsField()
-    model.turnOff()
     this.resetBoidsNumberField()
+    this.enableNumBoidsField()
     StartAndStopButton setText BoidsView.START
     this.disableSuspendResumeButton()
 
-  private def startAction(newBoidsNumber: Int): Unit =
+  def startAction(): Unit =
     this.disableStartAndStopButton()
     this.disableNumBoidsField()
-    model setBoidsNumber newBoidsNumber
-    model.turnOn()
     BoidsNumberField setText ""
     StartAndStopButton setText BoidsView.STOP
     this.enableSuspendResumeButton()
@@ -143,12 +135,10 @@ class BoidsView(private val model: BoidsModel, val width: Int, val height: Int) 
   def resumeAction(): Unit =
     this.disableSuspendResumeButton()
     SuspendResumeButton setText BoidsView.SUSPEND
-    model.resume()
 
-  private def suspendAction(): Unit =
+  def suspendAction(): Unit =
     this.disableSuspendResumeButton()
     SuspendResumeButton setText BoidsView.RESUME
-    model.suspend()
 
   def enableStartStopButton(): Unit = StartAndStopButton setEnabled true
   def enableSuspendResumeButton(): Unit = SuspendResumeButton setEnabled true
