@@ -1,6 +1,6 @@
 package pcd.ass01
 import akka.actor.typed.{ActorSystem, Behavior, Terminated}
-import akka.actor.typed.scaladsl.Behaviors
+import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
 
 object BoidsSimulator :
   private val FRAMERATE = 50
@@ -14,6 +14,7 @@ object BoidsSimulator :
     case Resume
     case UpdateBoids
     case UpdateView
+    case ChangeAttribute(a: Attribute, value: Double)
 
 class BoidsSimulator(private val model: BoidsModel) {
   import BoidsSimulator.{Command, Loop}
@@ -65,7 +66,11 @@ class BoidsSimulator(private val model: BoidsModel) {
     case _ => throw new IllegalArgumentException
 
   import Loop.*
+  private def check(ctx: ActorContext[Loop]): PartialFunction[Loop, Behavior[Loop]] =
+    case ChangeAttribute(attr, value) => model setWeight(attr, value); Behaviors.same
+    
   private val notRunning: Behavior[Loop] = Behaviors.receivePartial:
+    case (ctx, cmd: ChangeAttribute) => check(ctx)(cmd)
     case (ctx, Start(nBoidsText)) =>
       try
         validateNBoids(nBoidsText.toInt)
@@ -77,6 +82,7 @@ class BoidsSimulator(private val model: BoidsModel) {
         case _: IllegalArgumentException => ctx.log info "Only positive numbers allowed!";Behaviors.same
 
   private val running: Behavior[Loop] = Behaviors.receivePartial:
+    case (ctx, cmd: ChangeAttribute) => check(ctx)(cmd)
     case (ctx, UpdateView) =>
       updateView()
       ctx.self ! UpdateBoids
@@ -92,6 +98,7 @@ class BoidsSimulator(private val model: BoidsModel) {
       suspended
 
   private val suspended: Behavior[Loop] = Behaviors.receivePartial: 
+    case (ctx, cmd: ChangeAttribute) => check(ctx)(cmd)
     case (ctx, Stop)   =>
       view foreach (_.resumeAction())
       stop()

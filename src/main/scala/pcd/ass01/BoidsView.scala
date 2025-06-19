@@ -20,15 +20,21 @@ private class SynchButton(text: String) extends JButton(text):
   override def setEnabled(b: Boolean): Unit = synchronized(super.setEnabled(b))
   override def isEnabled: Boolean = synchronized(super.isEnabled)
 
-class MySlider(val attribute: Attribute) extends JSlider(SwingConstants.HORIZONTAL, 0, 20, 10):
+private object MySlider:
+  private val orientation = SwingConstants.HORIZONTAL
+  private val minValue = 0
+  private val maxValue = 20
+  private val initValue = 10
+  val factor = 0.1
+  
+class MySlider(val attribute: Attribute) 
+  extends JSlider(MySlider.orientation, MySlider.minValue, MySlider.maxValue, MySlider.initValue):
   setMajorTickSpacing(10)
   setMinorTickSpacing(1)
   setPaintTicks(true)
   setPaintLabels(true)
   private val labelTable = new util.Hashtable[Integer, JLabel]
-  labelTable put( 0, JLabel("0"))
-  labelTable put(10, JLabel("1"))
-  labelTable put(20, JLabel("2"))
+  scala.List(getMinimum, getValue, getMaximum) foreach{v => labelTable put(v, JLabel(v.toString))}
   setLabelTable(labelTable)
   setPaintLabels(true)
 
@@ -149,6 +155,6 @@ class BoidsView(private val model: BoidsModel, val width: Int, val height: Int, 
   private def resetBoidsNumberField(): Unit = BoidsNumberField setText SimulationParameter.N_BOIDS.toString
 
   override def stateChanged(e: ChangeEvent): Unit = e.getSource match
-    case s:MySlider => model setWeight(s.attribute, s.getValue)
+    case s:MySlider if !s.getValueIsAdjusting => mainLoop ! Loop.ChangeAttribute(s.attribute, MySlider.factor * s.getValue)
     case _ => ()
 }
