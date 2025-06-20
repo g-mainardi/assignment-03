@@ -1,5 +1,5 @@
 package pcd.ass01
-import akka.actor.typed.{ActorSystem, Behavior, Terminated}
+import akka.actor.typed.{ActorSystem, Behavior}
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
 
 object BoidsSimulator :
@@ -30,7 +30,7 @@ class BoidsSimulator(private val model: BoidsModel) {
 //  def clear(): Unit = ()
 //  def init(): Unit = ()
 
-  private def updateView(): Unit =
+  private val updateView: Behavior[Loop] = Behaviors.setup: ctx =>
     view foreach : v =>
       v.update()
       v updateFrameRate framerate
@@ -44,6 +44,8 @@ class BoidsSimulator(private val model: BoidsModel) {
           case ignore: Exception => ()
         framerate = BoidsSimulator.FRAMERATE
       else framerate = (1000 / dtElapsed).toInt
+    ctx.self ! Loop.UpdateBoids
+    running
 
   private def suspend(): Unit =
     view foreach(_.suspendAction())
@@ -82,10 +84,7 @@ class BoidsSimulator(private val model: BoidsModel) {
         case _: IllegalArgumentException => ctx.log info "Only positive numbers allowed!";Behaviors.same
 
   private val running: Behavior[Loop] = Behaviors.receivePartial:
-    case (ctx, UpdateView) =>
-      updateView()
-      ctx.self ! UpdateBoids
-      Behaviors.same
+    case (ctx, UpdateView) => updateView
     case (ctx, cmd: ChangeAttribute) => handleAttributeChanging(cmd)
     case (ctx, UpdateBoids) =>
       (ctx spawnAnonymous updateBoids) ! Command.UpdateBoidsVel
