@@ -23,9 +23,9 @@ class BoidsSimulator(private val model: BoidsModel) {
 
   private var view: Option[BoidsView] = None
 
-  private var startingTime = 0L
   private var framerate = 0
   private var t0 = 0L
+  private val frameratePeriod = 1000 / BoidsSimulator.FRAMERATE
 
 //  def clear(): Unit = ()
 //  def init(): Unit = ()
@@ -34,16 +34,15 @@ class BoidsSimulator(private val model: BoidsModel) {
     view foreach : v =>
       v.update()
       v updateFrameRate framerate
-      val dtElapsed = System.currentTimeMillis - t0
-      val frameratePeriod = 1000 / BoidsSimulator.FRAMERATE
-      t0 = System.currentTimeMillis
-      if dtElapsed < frameratePeriod
-      then
-        try Thread sleep (frameratePeriod - dtElapsed)
+      System.currentTimeMillis - t0 match
+      case dt if dt < frameratePeriod =>
+        try Thread sleep (frameratePeriod - dt)
         catch
           case ignore: Exception => ()
         framerate = BoidsSimulator.FRAMERATE
-      else framerate = (1000 / dtElapsed).toInt
+      case dt => framerate = (1000 / dt).toInt
+      t0 = System.currentTimeMillis
+
     ctx.self ! Loop.UpdateBoids
     running
 
@@ -59,7 +58,6 @@ class BoidsSimulator(private val model: BoidsModel) {
     view foreach {_.startAction()}
     model.generateBoids()
 //    init()
-    startingTime = System.currentTimeMillis
     t0 = System.currentTimeMillis
     view foreach (_.enableStartStopButton())
 
