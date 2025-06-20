@@ -66,11 +66,11 @@ class BoidsSimulator(private val model: BoidsModel) {
     case _ => throw new IllegalArgumentException
 
   import Loop.*
-  private def check(ctx: ActorContext[Loop]): PartialFunction[Loop, Behavior[Loop]] =
+  private val handleAttributeChanging: PartialFunction[Loop, Behavior[Loop]] =
     case ChangeAttribute(attr, value) => model setWeight(attr, value); Behaviors.same
     
   private val notRunning: Behavior[Loop] = Behaviors.receivePartial:
-    case (ctx, cmd: ChangeAttribute) => check(ctx)(cmd)
+    case (ctx, cmd: ChangeAttribute) => handleAttributeChanging(cmd)
     case (ctx, Start(nBoidsText)) =>
       try
         validateNBoids(nBoidsText.toInt)
@@ -82,11 +82,11 @@ class BoidsSimulator(private val model: BoidsModel) {
         case _: IllegalArgumentException => ctx.log info "Only positive numbers allowed!";Behaviors.same
 
   private val running: Behavior[Loop] = Behaviors.receivePartial:
-    case (ctx, cmd: ChangeAttribute) => check(ctx)(cmd)
     case (ctx, UpdateView) =>
       updateView()
       ctx.self ! UpdateBoids
       Behaviors.same
+    case (ctx, cmd: ChangeAttribute) => handleAttributeChanging(cmd)
     case (ctx, UpdateBoids) =>
       (ctx spawnAnonymous updateBoids) ! Command.UpdateBoidsVel
       Behaviors.same
@@ -97,8 +97,8 @@ class BoidsSimulator(private val model: BoidsModel) {
       suspend()
       suspended
 
-  private val suspended: Behavior[Loop] = Behaviors.receivePartial: 
-    case (ctx, cmd: ChangeAttribute) => check(ctx)(cmd)
+  private val suspended: Behavior[Loop] = Behaviors.receivePartial:
+    case (ctx, cmd: ChangeAttribute) => handleAttributeChanging(cmd)
     case (ctx, Stop)   =>
       view foreach (_.resumeAction())
       stop()
