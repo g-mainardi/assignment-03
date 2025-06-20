@@ -2,10 +2,14 @@ package pcd.ass01
 
 object ListUtils :
   def partitionByNumber[E](elems: List[E], numberOfPartitions: Int): List[List[E]] =
+    object ModMatch :
+      def unapply(x: Int): Option[Int] = Some(x % numberOfPartitions)
     (for
       ind <- 0 until numberOfPartitions
     yield
-      elems.zipWithIndex filter ((_, i) => (i % numberOfPartitions) == ind) map ((e, _) => e)).toList
+      elems.zipWithIndex collect:
+        case (e, ModMatch(`ind`)) => e
+    ).toList
 
   def partitionBySize[T](lst: List[T], batchSize: Int): List[List[T]] =
     partitionByNumber(lst, divideCeil(lst.size, batchSize))
