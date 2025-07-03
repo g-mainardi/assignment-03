@@ -2,35 +2,35 @@ name: Build
 
 on:
   push:
-    tags:
-      - '*'  # Esegui il workflow su ogni tag (es. v1.0.0, release-xyz)
+    branches: [ '*' ]
+  pull_request:
+    branches: [ '*' ]
 
 jobs:
   build:
+
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
-      - name: Setup Java
-        uses: actions/setup-java@v4
+      - name: Set up JDK 21
+        uses: actions/setup-java@v3
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: '21'
 
-      - name: Setup sbt
-        uses: sbt/setup-sbt@v1
-
-      - name: Build fat JAR
-        run: sbt clean assembly
-
-      - name: Get Git tag
-        id: tag
-        run: echo "tag_name=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-
-      - name: Upload fat JAR artifact with tag in name
-        uses: actions/upload-artifact@v4
+      - name: Cache Maven packages
+        uses: actions/cache@v3
         with:
-          name: scala-path-${{ steps.tag.outputs.tag_name }}
-          path: target/scala-*/*-assembly-*.jar
+          path: ~/.m2
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
+      - name: Build with Maven
+        run: mvn compile
+
+      - name: Run tests with Maven
+        run: mvn test
