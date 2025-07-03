@@ -19,9 +19,9 @@ class BoidsModel(var nBoids: Int,
     boids = (for
       _     <- 0 until nBoids
       origin = P2d(-width / 2, -height / 2)
-      pos    = origin sum V2d(Math.random * width, Math.random * height)
-      rndVel = V2d(Math.random, Math.random) mul (maxSpeed / 2)
-      vel    = rndVel sum v2d(- maxSpeed / 4)
+      pos    = origin + V2d(Math.random * width, Math.random * height)
+      rndVel = V2d(Math.random, Math.random) * (maxSpeed / 2)
+      vel    = rndVel + v2d(- maxSpeed / 4)
     yield
       Boid(pos, vel)).toList
 

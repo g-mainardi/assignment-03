@@ -5,16 +5,16 @@ class Boid(var pos: P2d, var vel: V2d) {
 
   def updateVelocity(model: BoidsModel): Unit =
     val calc = calculate(getNearbyBoids(model), model)
-    vel = vel sum Attribute.values.foldLeft(V2d(.0, .0)): (acc, attr) =>
-      acc sum (calc(attr) mul (model getWeightOf attr))
-    if vel.abs > model.maxSpeed then vel = vel.getNormalized mul model.maxSpeed
+    vel = vel + Attribute.values.foldLeft(V2d(.0, .0)): (acc, attr) =>
+      acc + (calc(attr) * (model getWeightOf attr))
+    if vel.abs > model.maxSpeed then vel = vel.norm * model.maxSpeed
 
   def updatePos(model: BoidsModel): Unit =
-    pos = pos sum vel
-    if pos.x < model.getMinX  then pos = pos sum V2d(model.width, 0)
-    if pos.x >= model.getMaxX then pos = pos sum V2d(-model.width, 0)
-    if pos.y < model.getMinY  then pos = pos sum V2d(0, model.height)
-    if pos.y >= model.getMaxY then pos = pos sum V2d(0, -model.height)
+    pos = pos + vel
+    if pos.x < model.getMinX  then pos = pos + V2d(model.width, 0)
+    if pos.x >= model.getMaxX then pos = pos + V2d(-model.width, 0)
+    if pos.y < model.getMinY  then pos = pos + V2d(0, model.height)
+    if pos.y >= model.getMaxY then pos = pos + V2d(0, -model.height)
 
   private def getNearbyBoids(model: BoidsModel) = model.boids filter : other =>
     (other ne this) && posInRadius(other.pos, model.perceptionRadius)
@@ -43,11 +43,11 @@ class Boid(var pos: P2d, var vel: V2d) {
   private def calculateSeparation(nearbyBoids: List[Boid], model: BoidsModel) =
     nearbyBoids.map(_.pos).foldLeft((P2d(.0, .0), 0)) { (acc, other) =>
       if posInRadius(other, model.avoidRadius)
-      then (acc._1 sum(pos sub other), acc._2 + 1)
+      then (acc._1 +(pos - other), acc._2 + 1)
       else acc
     } match
       case (_, 0)       => V2d(0,0)
-      case (P2d(dx, dy), count) => V2d(dx / count, dy / count).getNormalized
+      case (P2d(dx, dy), count) => V2d(dx / count, dy / count).norm
 
   private def posInRadius(other: P2d, radius: Double): Boolean = radius > (pos distance other)
 }
