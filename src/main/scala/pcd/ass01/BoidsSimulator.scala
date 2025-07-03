@@ -1,12 +1,9 @@
 package pcd.ass01
-import akka.actor.typed.{ActorSystem, Behavior}
+import akka.actor.typed.{ActorRef, ActorSystem, Behavior}
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
 
 object BoidsSimulator :
   private val FRAMERATE = 50
-  private enum Command:
-    case UpdateBoidsPos
-    case UpdateBoidsVel
   enum Loop:
     case Start(nBoids: String)
     case Stop
@@ -17,7 +14,8 @@ object BoidsSimulator :
     case ChangeAttribute(a: Attribute, value: Double)
 
 class BoidsSimulator(private val model: BoidsModel) {
-  import BoidsSimulator.{Command, Loop}
+  import BoidsSimulator.Loop
+  import Loop.*
 
   private var mainLoop: Option[ActorSystem[Loop]] = None
 
@@ -54,18 +52,19 @@ class BoidsSimulator(private val model: BoidsModel) {
     view foreach(_.resumeAction())
     view foreach(_.enableSuspendResumeButton())
 
-  private def start(): Unit =
+  private val start: Behavior[Loop] = Behaviors.setup: ctx =>
     view foreach {_.startAction()}
-    model.generateBoids()
+    model generateBoids ctx
 //    init()
     t0 = System.currentTimeMillis
     view foreach (_.enableStartStopButton())
+    ctx.self ! UpdateView
+    running
 
   private val validateNBoids: Int => Unit =
     case n if n > 0  => model setBoidsNumber n
     case _ => throw new IllegalArgumentException
 
-  import Loop.*
   private val handleAttributeChanging: PartialFunction[Loop, Behavior[Loop]] =
     case ChangeAttribute(attr, value) => model setWeight(attr, value); Behaviors.same
     
@@ -74,9 +73,7 @@ class BoidsSimulator(private val model: BoidsModel) {
     case (ctx, Start(nBoidsText)) =>
       try
         validateNBoids(nBoidsText.toInt)
-        start()
-        ctx.self ! UpdateView
-        running
+        start
       catch
         case _: NumberFormatException    => ctx.log info "Input format not allowed!";     Behaviors.same
         case _: IllegalArgumentException => ctx.log info "Only positive numbers allowed!";Behaviors.same
@@ -84,9 +81,7 @@ class BoidsSimulator(private val model: BoidsModel) {
   private val running: Behavior[Loop] = Behaviors.receivePartial:
     case (ctx, UpdateView) => updateView
     case (ctx, cmd: ChangeAttribute) => handleAttributeChanging(cmd)
-    case (ctx, UpdateBoids) =>
-      (ctx spawnAnonymous updateBoids) ! Command.UpdateBoidsVel
-      Behaviors.same
+    case (ctx, UpdateBoids) => updateBoids
     case (ctx, Stop) =>
       stop()
       notRunning
@@ -118,14 +113,7 @@ class BoidsSimulator(private val model: BoidsModel) {
     import SimulationParameter.*
     view = Some(BoidsView(model, SCREEN_WIDTH, SCREEN_HEIGHT, mainLoop.get))
 
-  private val updateBoids: Behavior[Command] = Behaviors.receive: (ctx, cmd) =>
-    cmd match
-    case Command.UpdateBoidsVel =>
-      model.boids foreach {_.updateVelocity(model)}
-      ctx.self ! Command.UpdateBoidsPos
-      Behaviors.same
-    case Command.UpdateBoidsPos =>
-      model.boids foreach {_.updatePos(model)}
-      mainLoop foreach{_ ! UpdateView}
-      Behaviors.stopped
+  private val updateBoids: Behavior[Loop] = Behaviors.setup: ctx =>
+    ctx spawnAnonymous(model updateBoids(ctx, mainLoop.get))
+    running
 }

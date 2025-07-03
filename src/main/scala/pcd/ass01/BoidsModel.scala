@@ -1,9 +1,15 @@
 package pcd.ass01
 
+import akka.actor.typed.scaladsl.ActorContext
 enum Attribute:
   case SEPARATION
   case ALIGNMENT
   case COHESION
+
+object BoidsModel:
+  enum Command:
+    case UpdatedBoidsVel
+    case UpdatedBoidsPos
 
 class BoidsModel(var nBoids: Int,
                  var separationWeight: Double,
@@ -14,8 +20,10 @@ class BoidsModel(var nBoids: Int,
                  val perceptionRadius: Double,
                  val avoidRadius: Double) :
   var boids: List[Boid] = List()
+  import BoidsModel.*
+  import Command.*
 
-  def generateBoids(): Unit =
+  def generateBoids(ctx: ActorContext[Loop]): Unit =
     boids = (for
       _     <- 0 until nBoids
       origin = P2d(-width / 2, -height / 2)
@@ -45,3 +53,5 @@ class BoidsModel(var nBoids: Int,
     case Attribute.COHESION   => cohesionWeight = value
 
   def setBoidsNumber(n: Int): Unit = nBoids = n
+
+  def updateBoids(ctx: ActorContext[Loop], replyTo: ActorRef[Loop]): Behavior[Command] = ???
