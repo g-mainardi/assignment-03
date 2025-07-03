@@ -34,7 +34,7 @@ class Boid(private var _pos: P2d, private var _vel: V2d) {
       val vec = getVector(this)
       val (avgX, avgY) = nearbyBoids.map(getVector)
         .foldLeft((.0,.0)){(acc, other) => (acc._1 + other.x, acc._2 + other.y)}
-      V2d(avgX / nearbyBoids.size - vec.x, avgY / nearbyBoids.size - vec.y).getNormalized
+      V2d(avgX / nearbyBoids.size - vec.x, avgY / nearbyBoids.size - vec.y).norm
     else
       V2d(0, 0)
 
