@@ -1,6 +1,8 @@
 package pcd.ass01
 
+import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.ActorContext
+import pcd.ass01.BoidsSimulator.Loop
 
 object BoidsModel:
   enum Command:
@@ -20,19 +22,21 @@ class BoidsModel(var nBoids: Int,
                  val maxSpeed: Double,
                  val perceptionRadius: Double,
                  val avoidRadius: Double) :
-  var boids: List[Boid] = List()
   import BoidsModel.*
   import Command.*
 
+  var boids: Seq[Boid] = Seq()
+
   def generateBoids(ctx: ActorContext[Loop]): Unit =
-    boids = (for
-      _     <- 0 until nBoids
-      origin = P2d(-width / 2, -height / 2)
-      pos    = origin + V2d(Math.random * width, Math.random * height)
-      rndVel = V2d(Math.random, Math.random) * (maxSpeed / 2)
-      vel    = rndVel + v2d(- maxSpeed / 4)
-    yield
-      Boid(pos, vel)).toList
+    boids =
+      for
+        i <- 0 until nBoids
+        origin = P2d(-width / 2, -height / 2)
+        pos = origin + V2d(Math.random * width, Math.random * height)
+        rndVel = V2d(Math.random, Math.random) * (maxSpeed / 2)
+        vel = rndVel + v2d(-maxSpeed / 4)
+      yield
+        Boid(pos, vel)
 
   def clearBoids(): Unit =
     nBoids = 0

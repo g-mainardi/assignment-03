@@ -24,12 +24,12 @@ class Boid(private var _pos: P2d, private var _vel: V2d) {
   private def getNearbyBoids(model: BoidsModel) = model.boids filter : other =>
     (other ne this) && posInRadius(other.pos, model.perceptionRadius)
 
-  private def calculate(boids: List[Boid], model: BoidsModel)(a: Attribute): V2d = (a match
+  private def calculate(boids: Seq[Boid], model: BoidsModel)(a: Attribute): V2d = (a match
     case SEPARATION => calculateSeparation
     case ALIGNMENT  => calculateAlignment
     case COHESION   => calculateCohesion)(boids, model)
 
-  private def calculateAll(getVector: Boid => Vector2d)(nearbyBoids: List[Boid], model: BoidsModel) =
+  private def calculateAll(getVector: Boid => Vector2d)(nearbyBoids: Seq[Boid], model: BoidsModel) =
     if nearbyBoids.nonEmpty
     then
       val vec = getVector(this)
@@ -39,13 +39,13 @@ class Boid(private var _pos: P2d, private var _vel: V2d) {
     else
       V2d(0, 0)
 
-  private def calculateAlignment(nearbyBoids: List[Boid], model: BoidsModel) =
+  private def calculateAlignment(nearbyBoids: Seq[Boid], model: BoidsModel) =
     calculateAll(_.vel)(nearbyBoids, model)
 
-  private def calculateCohesion(nearbyBoids: List[Boid], model: BoidsModel) =
+  private def calculateCohesion(nearbyBoids: Seq[Boid], model: BoidsModel) =
     calculateAll(_.pos)(nearbyBoids, model)
 
-  private def calculateSeparation(nearbyBoids: List[Boid], model: BoidsModel) =
+  private def calculateSeparation(nearbyBoids: Seq[Boid], model: BoidsModel) =
     nearbyBoids.map(_.pos).foldLeft((P2d(.0, .0), 0)) { (acc, other) =>
       if posInRadius(other, model.avoidRadius)
       then (acc._1 +(pos - other), acc._2 + 1)
