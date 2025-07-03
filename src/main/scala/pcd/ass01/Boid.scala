@@ -1,7 +1,11 @@
 package pcd.ass01
 
-class Boid(var pos: P2d, var vel: V2d) {
+class Boid(private var _pos: P2d, private var _vel: V2d) {
   import Attribute.*
+  def pos: P2d = _pos
+  def pos_=(p: P2d): Unit = _pos = p
+  def vel: V2d = _vel
+  def vel_=(v: V2d): Unit = _vel = v
 
   def updateVelocity(model: BoidsModel): Unit =
     val calc = calculate(getNearbyBoids(model), model)
