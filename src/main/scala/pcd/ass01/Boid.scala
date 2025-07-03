@@ -1,6 +1,7 @@
 package pcd.ass01
 
 class Boid(private var _pos: P2d, private var _vel: V2d) {
+  import BoidsModel.Attribute
   import Attribute.*
   def pos: P2d = _pos
   def pos_=(p: P2d): Unit = _pos = p

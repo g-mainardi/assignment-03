@@ -1,15 +1,16 @@
 package pcd.ass01
 
 import akka.actor.typed.scaladsl.ActorContext
-enum Attribute:
-  case SEPARATION
-  case ALIGNMENT
-  case COHESION
 
 object BoidsModel:
   enum Command:
     case UpdatedBoidsVel
     case UpdatedBoidsPos
+
+  enum Attribute:
+    case SEPARATION
+    case ALIGNMENT
+    case COHESION
 
 class BoidsModel(var nBoids: Int,
                  var separationWeight: Double,

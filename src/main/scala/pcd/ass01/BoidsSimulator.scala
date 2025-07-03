@@ -1,6 +1,7 @@
 package pcd.ass01
 import akka.actor.typed.{ActorRef, ActorSystem, Behavior}
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
+import pcd.ass01.BoidsModel.Attribute
 
 object BoidsSimulator :
   private val FRAMERATE = 50

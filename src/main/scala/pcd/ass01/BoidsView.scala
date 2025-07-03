@@ -1,7 +1,8 @@
 package pcd.ass01
 
 import akka.actor.typed.{ActorRef, ActorSystem}
-import pcd.ass01.Attribute.*
+import pcd.ass01.BoidsModel.Attribute
+import Attribute.*
 
 import javax.swing.*
 import javax.swing.event.ChangeEvent
