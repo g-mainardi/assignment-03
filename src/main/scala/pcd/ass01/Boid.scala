@@ -38,9 +38,9 @@ private class BoidActor(ctx: ActorContext[BoidActor.Command], val boid: Boid) {
     case Kill => Behaviors.stopped
 
   private def updateVelocity(model: BoidsModel): Unit =
-    val calc = calculate(getNearbyBoids(model), model)
+    val calculator: Attribute => V2d = calculate(model)
     boid.vel = vel + Attribute.values.foldLeft(V2d(.0, .0)): (acc, attr) =>
-      acc + (calc(attr) * (model getWeightOf attr))
+      acc + (calculator(attr) * (model getWeightOf attr))
     if vel.abs > model.maxSpeed then boid.vel = vel.norm * model.maxSpeed
 
   private def updatePos(model: BoidsModel): Unit =
@@ -53,12 +53,12 @@ private class BoidActor(ctx: ActorContext[BoidActor.Command], val boid: Boid) {
   private def getNearbyBoids(model: BoidsModel) = model.boids filter : other =>
     (other ne boid) && posInRadius(other.pos, model.perceptionRadius)
 
-  private def calculate(boids: Seq[Boid], model: BoidsModel)(a: Attribute): V2d = (a match
-    case SEPARATION => calculateSeparation
+  private def calculate(model: BoidsModel)(a: Attribute): V2d = (a match
+    case SEPARATION => calculateSeparation(model.avoidRadius)
     case ALIGNMENT  => calculateAlignment
-    case COHESION   => calculateCohesion)(boids, model)
+    case COHESION   => calculateCohesion)(getNearbyBoids(model))
 
-  private def calculateAll(getVector: Boid => Vector2d)(nearbyBoids: Seq[Boid], model: BoidsModel) =
+  private def calculateAll(getVector: Boid => Vector2d)(nearbyBoids: Seq[Boid]) =
     if nearbyBoids.nonEmpty
     then
       val vec = getVector(boid)
@@ -68,15 +68,15 @@ private class BoidActor(ctx: ActorContext[BoidActor.Command], val boid: Boid) {
     else
       V2d(0, 0)
 
-  private def calculateAlignment(nearbyBoids: Seq[Boid], model: BoidsModel) =
-    calculateAll(_.vel)(nearbyBoids, model)
+  private def calculateAlignment(nearbyBoids: Seq[Boid]) =
+    calculateAll(_.vel)(nearbyBoids)
 
-  private def calculateCohesion(nearbyBoids: Seq[Boid], model: BoidsModel) =
-    calculateAll(_.pos)(nearbyBoids, model)
+  private def calculateCohesion(nearbyBoids: Seq[Boid]) =
+    calculateAll(_.pos)(nearbyBoids)
 
-  private def calculateSeparation(nearbyBoids: Seq[Boid], model: BoidsModel) =
+  private def calculateSeparation(avoidRadius: Double)(nearbyBoids: Seq[Boid]) =
     nearbyBoids.map(_.pos).foldLeft((P2d(.0, .0), 0)) { (acc, other) =>
-      if posInRadius(other, model.avoidRadius)
+      if posInRadius(other, avoidRadius)
       then (acc._1 +(pos - other), acc._2 + 1)
       else acc
     } match
