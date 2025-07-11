@@ -3,7 +3,7 @@ package pcd.ass01
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
 import pcd.ass01.BoidActor.Command.*
-import pcd.ass01.BoidsSimulator.Loop
+import pcd.ass01.BoidsSimulator.{Loop, Update}
 
 object BoidsModel:
   enum Command:
@@ -102,5 +102,5 @@ class BoidsModel(var nBoids: Int,
 
   private def endUpdatingPos: Behavior[Command] =
     simRef foreach:
-      _ ! Loop.UpdateView
+      _ ! Update.View
     Behaviors.stopped

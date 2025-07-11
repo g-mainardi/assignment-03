@@ -71,7 +71,7 @@ class BoidsPanel(val panelWidth: Int, val panelHeight: Int, private val model: B
     g drawString(s"Num. Boids: ${model.nBoids}", 10, 25)
     g drawString(s"Framerate: $framerate", 10, 40)
 
-import BoidsSimulator.Loop
+import BoidsSimulator.{Loop, UI}
 class BoidsView(private val model: BoidsModel, val width: Int, val height: Int, private val mainLoop: ActorSystem[Loop]) extends ChangeListener {
   private val frame = new JFrame("Boids Simulation")
   frame.setSize(width, height)
@@ -100,8 +100,8 @@ class BoidsView(private val model: BoidsModel, val width: Int, val height: Int, 
 
   private object ControlPanel extends JPanel:
     SuspendResumeButton addActionListener { _ => SuspendResumeButton.getText match
-      case BoidsView.SUSPEND => mainLoop ! Loop.Suspend
-      case BoidsView.RESUME  => mainLoop ! Loop.Resume
+      case BoidsView.SUSPEND => mainLoop ! UI.Suspend
+      case BoidsView.RESUME  => mainLoop ! UI.Resume
       case _ => ()
     }
     this add new JLabel("Separation")
@@ -114,8 +114,8 @@ class BoidsView(private val model: BoidsModel, val width: Int, val height: Int, 
     this add BoidsNumberField
     this add StartAndStopButton
     StartAndStopButton addActionListener { _ => StartAndStopButton.getText match
-      case BoidsView.START => mainLoop ! Loop.Start(BoidsNumberField.getText)
-      case BoidsView.STOP  => mainLoop ! Loop.Stop
+      case BoidsView.START => mainLoop ! UI.Start(BoidsNumberField.getText)
+      case BoidsView.STOP  => mainLoop ! UI.Stop
       case _ => ()
     }
     this add SuspendResumeButton
@@ -156,6 +156,6 @@ class BoidsView(private val model: BoidsModel, val width: Int, val height: Int, 
   private def resetBoidsNumberField(): Unit = BoidsNumberField setText SimulationParameter.N_BOIDS.toString
 
   override def stateChanged(e: ChangeEvent): Unit = e.getSource match
-    case s:MySlider if !s.getValueIsAdjusting => mainLoop ! Loop.ChangeAttribute(s.attribute, MySlider.factor * s.getValue)
+    case s:MySlider if !s.getValueIsAdjusting => mainLoop ! UI.ChangeAttribute(s.attribute, MySlider.factor * s.getValue)
     case _ => ()
 }

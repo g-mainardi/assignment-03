@@ -17,14 +17,16 @@ object SimulationParameter:
   private[ass01] val AVOID_RADIUS = 20.0
 
 object BoidsSimulator :
-  enum Loop:
+  trait Loop
+  enum UI extends Loop:
     case Start(nBoids: String)
     case Stop
     case Suspend
     case Resume
-    case UpdateBoids
-    case UpdateView
     case ChangeAttribute(a: Attribute, value: Double)
+  enum Update extends Loop:
+    case Boids
+    case View
 
 trait SuspendableViewController:
 
@@ -61,8 +63,7 @@ trait SuspendableViewController:
     private def getPeriod: Int = (1000 / dt).toInt
 
 abstract class AbsBoidsSimulator(private val model: BoidsModel) extends SuspendableViewController:
-  import BoidsSimulator.Loop
-  import Loop.*
+  import BoidsSimulator.*
 
   protected var mainLoop: Option[ActorSystem[Loop]] = None
 
@@ -71,12 +72,12 @@ abstract class AbsBoidsSimulator(private val model: BoidsModel) extends Suspenda
     model generateBoids ctx
     t0 = System.currentTimeMillis
     view foreach (_.enableStartStopButton())
-    ctx.self ! UpdateView
+    ctx.self ! Update.View
     running
 
   protected val notRunning: Behavior[Loop] = Behaviors.receivePartial:
-    case (ctx, cmd: ChangeAttribute) => handleAttributeChanging(cmd)
-    case (ctx, Start(nBoidsText)) =>
+    case (ctx, cmd: UI.ChangeAttribute) => handleAttributeChanging(cmd)
+    case (ctx, UI.Start(nBoidsText)) =>
       try
         validateNBoids(nBoidsText.toInt)
         start
@@ -84,32 +85,32 @@ abstract class AbsBoidsSimulator(private val model: BoidsModel) extends Suspenda
         case _: NumberFormatException    => ctx.log info "Input format not allowed!";     Behaviors.same
         case _: IllegalArgumentException => ctx.log info "Only positive numbers allowed!";Behaviors.same
 
-  protected val running: Behavior[Loop] = Behaviors.receivePartial:
-    case (ctx, UpdateView) =>
+  private val running: Behavior[Loop] = Behaviors.receivePartial:
+    case (ctx, Update.View) =>
       updateView()
-      ctx.self ! Loop.UpdateBoids
+      ctx.self ! Update.Boids
       running
-    case (ctx, cmd: ChangeAttribute) => handleAttributeChanging(cmd)
-    case (ctx, UpdateBoids) => updateBoids
-    case (ctx, Stop) =>
+    case (ctx, cmd: UI.ChangeAttribute) => handleAttributeChanging(cmd)
+    case (ctx, Update.Boids) => updateBoids
+    case (ctx, UI.Stop) =>
       stop()
       notRunning
-    case (ctx, Suspend) =>
+    case (ctx, UI.Suspend) =>
       suspend()
       suspended
 
-  protected val suspended: Behavior[Loop] = Behaviors.receivePartial:
-    case (ctx, cmd: ChangeAttribute) => handleAttributeChanging(cmd)
-    case (ctx, Stop)   =>
+  private val suspended: Behavior[Loop] = Behaviors.receivePartial:
+    case (ctx, cmd: UI.ChangeAttribute) => handleAttributeChanging(cmd)
+    case (ctx, UI.Stop)   =>
       view foreach (_.resumeAction())
       stop()
       notRunning
-    case (ctx, Resume) =>
+    case (ctx, UI.Resume) =>
       resume()
-      ctx.self ! UpdateView
+      ctx.self ! Update.View
       running
 
-  protected val updateBoids: Behavior[Loop] = Behaviors.setup: ctx =>
+  private val updateBoids: Behavior[Loop] = Behaviors.setup: ctx =>
     ctx spawnAnonymous(model updateBoids(ctx, mainLoop.get))
     running
 
@@ -118,9 +119,9 @@ abstract class AbsBoidsSimulator(private val model: BoidsModel) extends Suspenda
     case _ => throw new IllegalArgumentException
 
   private val handleAttributeChanging: PartialFunction[Loop, Behavior[Loop]] =
-    case ChangeAttribute(attr, value) => model setWeight(attr, value); Behaviors.same
+    case UI.ChangeAttribute(attr, value) => model setWeight(attr, value); Behaviors.same
 
-  protected def stop(): Unit =
+  private def stop(): Unit =
     view foreach {_.stopAction()}
     model.clearBoids()
     view foreach : (v: BoidsView) =>
